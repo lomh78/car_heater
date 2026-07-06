@@ -1,15 +1,13 @@
 {
   "domain": "car_heater",
   "name": "Car Heater",
-  "codeowners":  [
-    "@lomh78"
-  ],
+  "codeowners": [],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/lomh78/car-heater",
+  "documentation": "https://github.com/your-username/car-heater",
   "integration_type": "device",
   "iot_class": "local_polling",
   "requirements": [],
-  "version": "1.0.6",
-  "issue_tracker": "https://github.com/lomh78/car-heater/issues"
+  "version": "1.0.9",
+  "issue_tracker": "https://github.com/your-username/car-heater/issues"
 }

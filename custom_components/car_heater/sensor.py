@@ -79,6 +79,15 @@ class CarHeaterSensor(CarHeaterEntity, SensorEntity):
             "stop_datetime": data.stop.isoformat() if data.stop else None,
             "heater_switch_state": data.heater_switch_state,
             "last_action": data.last_action,
+            "last_start": data.last_start.isoformat() if data.last_start else None,
+            "last_stop": data.last_stop.isoformat() if data.last_stop else None,
+            "current_start": data.current_start.isoformat() if data.current_start else None,
+            "current_stop": data.current_stop.isoformat() if data.current_stop else None,
+            "previous_start": data.previous_start.isoformat() if data.previous_start else None,
+            "previous_stop": data.previous_stop.isoformat() if data.previous_stop else None,
+            "planned_start": data.start.isoformat() if data.start else None,
+            "planned_stop": data.stop.isoformat() if data.stop else None,
+            "planned_departure": data.departure.isoformat() if data.departure else None,
         }
 
 

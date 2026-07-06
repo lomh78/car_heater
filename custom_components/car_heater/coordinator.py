@@ -41,6 +41,12 @@ from .const import (
     STATE_START_NOW_ACTIVE,
     STATE_START_NOW_STARTED,
     STATE_START_NOW_STOP,
+    STATE_LAST_START,
+    STATE_LAST_STOP,
+    STATE_CURRENT_START,
+    STATE_CURRENT_STOP,
+    STATE_PREVIOUS_START,
+    STATE_PREVIOUS_STOP,
     STATUS_DISABLED,
     STATUS_FINISHED,
     STATUS_NO_DEPARTURE,
@@ -75,6 +81,12 @@ class HeaterData:
     status: str = STATUS_DISABLED
     heater_switch_state: str | None = None
     last_action: str | None = None
+    last_start: datetime | None = None
+    last_stop: datetime | None = None
+    current_start: datetime | None = None
+    current_stop: datetime | None = None
+    previous_start: datetime | None = None
+    previous_stop: datetime | None = None
 
 
 class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
@@ -94,6 +106,12 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         self.start_now_started: str | None = None
         self.start_now_stop: str | None = None
         self.last_action: str | None = None
+        self.last_start: str | None = None
+        self.last_stop: str | None = None
+        self.current_start: str | None = None
+        self.current_stop: str | None = None
+        self.previous_start: str | None = None
+        self.previous_stop: str | None = None
         self._previous_status: str | None = None
 
     @property
@@ -116,6 +134,12 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             self.start_now_active = bool(stored.get(STATE_START_NOW_ACTIVE, False))
             self.start_now_started = stored.get(STATE_START_NOW_STARTED)
             self.start_now_stop = stored.get(STATE_START_NOW_STOP)
+            self.last_start = stored.get(STATE_LAST_START)
+            self.last_stop = stored.get(STATE_LAST_STOP)
+            self.current_start = stored.get(STATE_CURRENT_START)
+            self.current_stop = stored.get(STATE_CURRENT_STOP)
+            self.previous_start = stored.get(STATE_PREVIOUS_START)
+            self.previous_stop = stored.get(STATE_PREVIOUS_STOP)
 
     async def _async_save(self) -> None:
         await self.store.async_save(
@@ -125,6 +149,12 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
                 STATE_START_NOW_ACTIVE: self.start_now_active,
                 STATE_START_NOW_STARTED: self.start_now_started,
                 STATE_START_NOW_STOP: self.start_now_stop,
+                STATE_LAST_START: self.last_start,
+                STATE_LAST_STOP: self.last_stop,
+                STATE_CURRENT_START: self.current_start,
+                STATE_CURRENT_STOP: self.current_stop,
+                STATE_PREVIOUS_START: self.previous_start,
+                STATE_PREVIOUS_STOP: self.previous_stop,
             }
         )
 
@@ -154,6 +184,10 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         self.enabled = True
         self.start_now_started = now.isoformat()
         self.start_now_stop = stop.isoformat()
+        self.current_start = now.isoformat()
+        self.current_stop = None
+        self.last_start = now.isoformat()
+        self.last_stop = None
         await self._async_save()
         await self.async_request_refresh()
 
@@ -163,7 +197,15 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         self.manual_active = False
         self.start_now_started = None
         self.start_now_stop = None
+        stop_time = dt_util.now().replace(microsecond=0).isoformat()
+        self.current_stop = stop_time
+        if self.current_start:
+            self.previous_start = self.current_start
+            self.previous_stop = stop_time
+        self.last_stop = stop_time
         await self._async_turn_heater_off()
+        self.current_start = None
+        self.current_stop = None
         await self._async_save()
         await self.async_request_refresh()
 
@@ -264,6 +306,12 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             runtime_hours=runtime,
             heater_switch_state=switch_state.state if switch_state else None,
             last_action=self.last_action,
+            last_start=self._parse_dt(self.last_start),
+            last_stop=self._parse_dt(self.last_stop),
+            current_start=self._parse_dt(self.current_start),
+            current_stop=self._parse_dt(self.current_stop),
+            previous_start=self._parse_dt(self.previous_start),
+            previous_stop=self._parse_dt(self.previous_stop),
         )
 
         if not self.enabled:
@@ -325,6 +373,12 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         return base
 
     async def _async_turn_heater_off(self) -> None:
+        stop_time = dt_util.now().replace(microsecond=0).isoformat()
+        self.current_stop = stop_time
+        if self.current_start:
+            self.previous_start = self.current_start
+            self.previous_stop = stop_time
+        self.last_stop = stop_time
         await self.hass.services.async_call(
             "switch",
             "turn_off",
@@ -332,6 +386,8 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             blocking=False,
         )
         self.last_action = "turn_off"
+        self.current_start = None
+        self.current_stop = None
 
     async def _control_switch(self, data: HeaterData) -> None:
         switch_state = self.hass.states.get(self.heater_switch)
@@ -339,6 +395,15 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         should_be_on = data.enabled and data.status in {STATUS_RUNNING, STATUS_START_NOW} and data.runtime_hours >= 0
 
         if should_be_on and not is_on:
+            start_time = dt_util.now().replace(microsecond=0).isoformat()
+            self.current_start = start_time
+            self.current_stop = None
+            self.last_start = start_time
+            self.last_stop = None
+            data.current_start = self._parse_dt(self.current_start)
+            data.current_stop = None
+            data.last_start = self._parse_dt(self.last_start)
+            data.last_stop = None
             await self.hass.services.async_call(
                 "switch",
                 "turn_on",
@@ -347,11 +412,18 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             )
             self.last_action = "turn_on"
             data.last_action = self.last_action
+            await self._async_save()
             return
 
         if not should_be_on and is_on and self._previous_status in {STATUS_RUNNING, STATUS_START_NOW}:
             await self._async_turn_heater_off()
+            data.last_stop = self._parse_dt(self.last_stop)
+            data.current_start = self._parse_dt(self.current_start)
+            data.current_stop = self._parse_dt(self.current_stop)
+            data.previous_start = self._parse_dt(self.previous_start)
+            data.previous_stop = self._parse_dt(self.previous_stop)
             data.last_action = self.last_action
+            await self._async_save()
 
         if data.status == STATUS_FINISHED:
             changed = False
