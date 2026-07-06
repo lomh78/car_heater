@@ -103,7 +103,9 @@ class CarHeaterSensor(CarHeaterEntity, SensorEntity):
             "planned_stop": data.planned_stop.isoformat() if data.planned_stop else None,
             "planned_departure": data.planned_departure.isoformat() if data.planned_departure else None,
             "planned_duration_minutes": data.planned_duration_minutes,
+            "run_history": data.run_history or [],
             "timeline": {
+                "history": data.run_history or [],
                 "previous": {
                     "start": data.previous_start.isoformat() if data.previous_start else None,
                     "stop": data.previous_stop.isoformat() if data.previous_stop else None,

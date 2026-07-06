@@ -48,6 +48,8 @@ from .const import (
     STATE_CURRENT_STOP,
     STATE_PREVIOUS_START,
     STATE_PREVIOUS_STOP,
+    STATE_RUN_HISTORY,
+    DEFAULT_RUN_HISTORY_LIMIT,
     STATUS_DISABLED,
     STATUS_FINISHED,
     STATUS_NO_DEPARTURE,
@@ -106,6 +108,7 @@ class HeaterData:
     previous_duration_minutes: int | None = None
     current_duration_minutes: int | None = None
     planned_duration_minutes: int | None = None
+    run_history: list[dict[str, Any]] | None = None
 
 
 class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
@@ -131,6 +134,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         self.current_stop: str | None = None
         self.previous_start: str | None = None
         self.previous_stop: str | None = None
+        self.run_history: list[dict[str, Any]] = []
         self._previous_status: str | None = None
 
     @property
@@ -159,6 +163,8 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             self.current_stop = stored.get(STATE_CURRENT_STOP)
             self.previous_start = stored.get(STATE_PREVIOUS_START)
             self.previous_stop = stored.get(STATE_PREVIOUS_STOP)
+            history = stored.get(STATE_RUN_HISTORY, [])
+            self.run_history = history if isinstance(history, list) else []
 
     async def _async_save(self) -> None:
         await self.store.async_save(
@@ -174,6 +180,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
                 STATE_CURRENT_STOP: self.current_stop,
                 STATE_PREVIOUS_START: self.previous_start,
                 STATE_PREVIOUS_STOP: self.previous_stop,
+                STATE_RUN_HISTORY: self.run_history[-DEFAULT_RUN_HISTORY_LIMIT:],
             }
         )
 
@@ -210,6 +217,32 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         await self._async_save()
         await self.async_request_refresh()
 
+    def _add_run_to_history(self, start: str | None, stop: str | None, source: str = "auto") -> None:
+        """Store a completed run for timeline/history rendering."""
+        if not start or not stop:
+            return
+
+        start_dt = self._parse_dt(start)
+        stop_dt = self._parse_dt(stop)
+        duration = self._duration_minutes(start_dt, stop_dt)
+        if duration is None or duration <= 0:
+            return
+
+        item = {
+            "start": start,
+            "stop": stop,
+            "duration_minutes": duration,
+            "source": source,
+        }
+
+        # Remove duplicates for the same run, then keep the newest completed runs.
+        self.run_history = [
+            run for run in self.run_history
+            if not (run.get("start") == start and run.get("stop") == stop)
+        ]
+        self.run_history.append(item)
+        self.run_history = self.run_history[-DEFAULT_RUN_HISTORY_LIMIT:]
+
     async def async_stop_now(self) -> None:
         """Stop the heater and clear immediate/manual run modes."""
         self.start_now_active = False
@@ -221,6 +254,8 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         if self.current_start:
             self.previous_start = self.current_start
             self.previous_stop = stop_time
+            self._add_run_to_history(self.current_start, stop_time, "auto")
+            self._add_run_to_history(self.current_start, stop_time, "manual_stop")
         self.last_stop = stop_time
         await self._async_turn_heater_off()
         self.current_start = None
@@ -374,6 +409,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             current_stop=self._parse_dt(self.current_stop),
             previous_start=self._parse_dt(self.previous_start),
             previous_stop=self._parse_dt(self.previous_stop),
+            run_history=list(self.run_history),
         )
 
         if not self.enabled:
@@ -464,6 +500,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             self.current_stop = now_iso
             self.previous_start = self.current_start
             self.previous_stop = now_iso
+            self._add_run_to_history(self.current_start, now_iso, "switch")
             self.last_stop = now_iso
             self.current_start = None
             self.current_stop = None
@@ -479,6 +516,8 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         if self.current_start:
             self.previous_start = self.current_start
             self.previous_stop = stop_time
+            self._add_run_to_history(self.current_start, stop_time, "auto")
+            self._add_run_to_history(self.current_start, stop_time, "manual_stop")
         self.last_stop = stop_time
         await self.hass.services.async_call(
             "switch",

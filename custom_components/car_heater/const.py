@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 DOMAIN = "car_heater"
 NAME = "Car Heater"
 MANUFACTURER = "Custom"
-VERSION = "1.0.11"
+VERSION = "1.0.13"
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.TIME, Platform.BUTTON]
 
@@ -51,6 +51,8 @@ STATE_CURRENT_START = "current_start"
 STATE_CURRENT_STOP = "current_stop"
 STATE_PREVIOUS_START = "previous_start"
 STATE_PREVIOUS_STOP = "previous_stop"
+STATE_RUN_HISTORY = "run_history"
+DEFAULT_RUN_HISTORY_LIMIT = 10
 
 STATUS_DISABLED = "disabled"
 STATUS_NO_DEPARTURE = "no_departure"
