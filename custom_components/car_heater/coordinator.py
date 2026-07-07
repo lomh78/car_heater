@@ -15,12 +15,10 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_AFTER_DEPARTURE_MINUTES,
-    CONF_COEFFICIENT,
     CONF_HEATER_SWITCH,
     CONF_MANUAL_DEPARTURE,
     CONF_MAX_RUNTIME,
-    CONF_MIN_RUNTIME,
-    CONF_OFFSET,
+    CONF_MANUAL_RUNTIME,
     CONF_POWER_SENSOR,
     CONF_TEMP_LIMIT,
     CONF_TEMP_SENSORS,
@@ -28,12 +26,13 @@ from .const import (
     CONF_WORKDAY_SENSOR,
     CONF_USE_WORKDAY,
     DEFAULT_AFTER_DEPARTURE_MINUTES,
-    DEFAULT_COEFFICIENT,
     DEFAULT_MANUAL_DEPARTURE,
     DEFAULT_USE_WORKDAY,
+    DEFAULT_AUTO_RUNTIME_CURVE,
+    DEFAULT_MANUAL_RUNTIME_CURVE,
+    MANUAL_RUNTIME_CURVE_FIELDS,
     DEFAULT_MAX_RUNTIME,
-    DEFAULT_MIN_RUNTIME,
-    DEFAULT_OFFSET,
+    DEFAULT_MANUAL_RUNTIME,
     DEFAULT_TEMP_LIMIT,
     DEFAULT_WORKDAY_DEPARTURE,
     DOMAIN,
@@ -104,6 +103,10 @@ class HeaterData:
     previous_start: datetime | None = None
     previous_stop: datetime | None = None
     runtime_minutes: int = 0
+    runtime_mode: str = "auto"
+    runtime_curve: list[dict[str, Any]] | None = None
+    runtime_temp_limit: float = DEFAULT_TEMP_LIMIT
+    runtime_curve_mode: str = "auto"
     after_departure_minutes: int = 0
     previous_duration_minutes: int | None = None
     current_duration_minutes: int | None = None
@@ -318,6 +321,60 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         except (TypeError, ValueError):
             return None, str(entity_id), state.name, unit, device_class
 
+    def _is_manual_runtime(self) -> bool:
+        return bool(self.config.get(CONF_MANUAL_RUNTIME, DEFAULT_MANUAL_RUNTIME))
+
+    def _runtime_curve_points(self) -> tuple[tuple[float, float], ...]:
+        """Return the active runtime curve as (degrees below limit, minutes)."""
+        if not self._is_manual_runtime():
+            return tuple((float(delta), float(minutes)) for delta, minutes in DEFAULT_AUTO_RUNTIME_CURVE)
+
+        points: list[tuple[float, float]] = []
+        for key, delta, default_minutes in MANUAL_RUNTIME_CURVE_FIELDS:
+            try:
+                minutes = float(self.config.get(key, default_minutes))
+            except (TypeError, ValueError):
+                minutes = float(default_minutes)
+            points.append((float(delta), max(minutes, 0.0)))
+        return tuple(points)
+
+    def _runtime_curve_preview(self, temp_limit: float | None = None) -> list[dict[str, Any]]:
+        """Return active curve as absolute temperatures for UI/card preview."""
+        limit = float(temp_limit if temp_limit is not None else self.config.get(CONF_TEMP_LIMIT, DEFAULT_TEMP_LIMIT))
+        return [
+            {
+                "temperature": round(limit - diff, 1),
+                "degrees_below_limit": round(diff, 1),
+                "runtime_minutes": int(round(minutes)),
+            }
+            for diff, minutes in self._runtime_curve_points()
+        ]
+
+    @staticmethod
+    def _interpolate_curve(delta: float, points: tuple[tuple[float, float], ...]) -> float:
+        """Interpolate runtime minutes from configured curve points."""
+        if not points:
+            return 0.0
+        points = tuple(sorted(points, key=lambda item: item[0]))
+        if delta <= points[0][0]:
+            return float(points[0][1])
+
+        for (x1, y1), (x2, y2) in zip(points, points[1:]):
+            if delta <= x2:
+                if x2 == x1:
+                    return float(y2)
+                ratio = (delta - x1) / (x2 - x1)
+                return float(y1 + ratio * (y2 - y1))
+
+        # Extrapolate beyond the last point using the last segment. The final
+        # value is still clamped by max_runtime below.
+        if len(points) == 1:
+            return float(points[0][1])
+        x1, y1 = points[-2]
+        x2, y2 = points[-1]
+        ratio = (delta - x1) / (x2 - x1)
+        return float(y1 + ratio * (y2 - y1))
+
     def _runtime_from_temperature(self, temperature: float | None) -> float:
         if temperature is None:
             return 0.0
@@ -326,13 +383,15 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         if temperature >= temp_limit:
             return 0.0
 
-        runtime = (
-            temperature * float(self.config.get(CONF_COEFFICIENT, DEFAULT_COEFFICIENT))
-            + float(self.config.get(CONF_OFFSET, DEFAULT_OFFSET))
-        )
-        runtime = max(runtime, float(self.config.get(CONF_MIN_RUNTIME, DEFAULT_MIN_RUNTIME)))
-        runtime = min(runtime, float(self.config.get(CONF_MAX_RUNTIME, DEFAULT_MAX_RUNTIME)))
-        return round(runtime, 1)
+        # The curve is defined as degrees below the configured limit. Moving the
+        # temperature limit therefore shifts the curve without changing its shape.
+        runtime_minutes = self._interpolate_curve(temp_limit - temperature, self._runtime_curve_points())
+
+        max_minutes = float(self.config.get(CONF_MAX_RUNTIME, DEFAULT_MAX_RUNTIME)) * 60
+        min_minutes = 0.0
+        runtime_minutes = max(runtime_minutes, min_minutes)
+        runtime_minutes = min(runtime_minutes, max_minutes)
+        return round(runtime_minutes / 60, 2)
 
     def _is_workday(self) -> bool | None:
         entity_id = self.config.get(CONF_WORKDAY_SENSOR)
@@ -359,6 +418,10 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
 
     def _set_timeline_durations(self, data: HeaterData, now: datetime) -> None:
         data.runtime_minutes = int(round((data.runtime_hours or 0.0) * 60))
+        data.runtime_mode = "manual" if self._is_manual_runtime() else "auto"
+        data.runtime_temp_limit = float(self.config.get(CONF_TEMP_LIMIT, DEFAULT_TEMP_LIMIT))
+        data.runtime_curve_mode = data.runtime_mode
+        data.runtime_curve = self._runtime_curve_preview(data.runtime_temp_limit)
         data.after_departure_minutes = int(
             self.config.get(CONF_AFTER_DEPARTURE_MINUTES, DEFAULT_AFTER_DEPARTURE_MINUTES)
         )
