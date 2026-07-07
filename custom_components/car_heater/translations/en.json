@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Car heater",
-        "description": "Select outlet, temperature sensors and default times.",
+        "description": "Select outlet, temperature sensors, times and runtime model.",
         "data": {
           "name": "Name",
           "heater_switch": "Switch to control",
@@ -13,13 +13,26 @@
           "workday_departure": "Workday departure time",
           "manual_departure": "Manual departure time",
           "temp_limit": "Temperature limit",
-          "coefficient": "Temperature coefficient",
-          "offset": "Base runtime",
-          "min_runtime": "Minimum runtime",
           "max_runtime": "Maximum runtime",
           "after_departure_minutes": "Stop after departure",
           "use_workday": "Use workday",
-          "power_sensor": "Power sensor, optional"
+          "power_sensor": "Power sensor, optional",
+          "manual_runtime": "Manual runtime curve"
+        }
+      },
+      "manual_curve": {
+        "title": "Manual runtime curve",
+        "description": "Set how long the heater should run at different temperatures relative to the temperature limit.",
+        "data": {
+          "manual_runtime": "Manual runtime curve",
+          "max_runtime": "Maximum runtime",
+          "runtime_curve_limit": "At temperature limit",
+          "runtime_curve_minus_5": "5 °C below limit",
+          "runtime_curve_minus_10": "10 °C below limit",
+          "runtime_curve_minus_15": "15 °C below limit",
+          "runtime_curve_minus_20": "20 °C below limit",
+          "runtime_curve_minus_25": "25 °C below limit",
+          "runtime_curve_minus_30": "30 °C below limit"
         }
       }
     }
@@ -28,7 +41,7 @@
     "step": {
       "init": {
         "title": "Car heater options",
-        "description": "Change outlet, temperature sensors, times and calculation.",
+        "description": "Change outlet, temperature sensors, times and runtime model.",
         "data": {
           "heater_switch": "Switch to control",
           "temp_sensors": "Temperature sensors in priority order",
@@ -36,13 +49,26 @@
           "workday_departure": "Workday departure time",
           "manual_departure": "Manual departure time",
           "temp_limit": "Temperature limit",
-          "coefficient": "Temperature coefficient",
-          "offset": "Base runtime",
-          "min_runtime": "Minimum runtime",
           "max_runtime": "Maximum runtime",
           "after_departure_minutes": "Stop after departure",
           "use_workday": "Use workday",
-          "power_sensor": "Power sensor, optional"
+          "power_sensor": "Power sensor, optional",
+          "manual_runtime": "Manual runtime curve"
+        }
+      },
+      "manual_curve": {
+        "title": "Manual runtime curve",
+        "description": "Set how long the heater should run at different temperatures relative to the temperature limit.",
+        "data": {
+          "manual_runtime": "Manual runtime curve",
+          "max_runtime": "Maximum runtime",
+          "runtime_curve_limit": "At temperature limit",
+          "runtime_curve_minus_5": "5 °C below limit",
+          "runtime_curve_minus_10": "10 °C below limit",
+          "runtime_curve_minus_15": "15 °C below limit",
+          "runtime_curve_minus_20": "20 °C below limit",
+          "runtime_curve_minus_25": "25 °C below limit",
+          "runtime_curve_minus_30": "30 °C below limit"
         }
       }
     }
