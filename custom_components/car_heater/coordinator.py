@@ -506,7 +506,11 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         roll_to_tomorrow = True
         if self.manual_active:
             departure_time = self._get_time(CONF_MANUAL_DEPARTURE, DEFAULT_MANUAL_DEPARTURE)
-            roll_to_tomorrow = False
+            # Treat manual departure the same way as scheduled departures:
+            # if today's manual departure and after-time have already passed,
+            # keep one-time mode active and schedule it for tomorrow instead
+            # of immediately marking it as finished and turning it off.
+            roll_to_tomorrow = True
             base.schedule_mode = "manual"
         elif self.use_workday and is_workday is True:
             departure_time = self._get_time(CONF_WORKDAY_DEPARTURE, DEFAULT_WORKDAY_DEPARTURE)
