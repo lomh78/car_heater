@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Car heater",
-        "description": "Select outlet, temperature sensors, times and base settings. You select calculation method in the next step.",
+        "description": "Select outlet, temperature sensors, times and base settings.\nEnable manual calculation if you want to enter your own runtime curve in the next step.",
         "data": {
           "name": "Name",
           "heater_switch": "Switch to control",
@@ -34,14 +34,6 @@
           "runtime_curve_minus_25": "25 °C below limit",
           "runtime_curve_minus_30": "30 °C below limit"
         }
-      },
-      "runtime_method": {
-        "title": "Calculation method",
-        "description": "Choose how runtime should be calculated. Automatic uses a preset heating curve. Manual lets you set runtime at several temperature points.",
-        "menu_options": {
-          "auto_runtime": "Automatic calculation",
-          "manual_curve": "Manual calculation"
-        }
       }
     }
   },
@@ -49,7 +41,7 @@
     "step": {
       "init": {
         "title": "Car heater options",
-        "description": "Change outlet, temperature sensors, times and base settings. You select calculation method in the next step.",
+        "description": "Change outlet, temperature sensors, times and base settings.\nEnable manual calculation if you want to enter your own runtime curve in the next step.",
         "data": {
           "heater_switch": "Switch to control",
           "temp_sensors": "Temperature sensors in priority order",
@@ -78,36 +70,23 @@
           "runtime_curve_minus_25": "25 °C below limit",
           "runtime_curve_minus_30": "30 °C below limit"
         }
-      },
-      "runtime_method": {
-        "title": "Calculation method",
-        "description": "Choose how runtime should be calculated. Automatic uses a preset heating curve. Manual lets you set runtime at several temperature points.",
-        "menu_options": {
-          "auto_runtime": "Automatic calculation",
-          "manual_curve": "Manual calculation"
-        }
       }
     }
   },
   "entity": {
     "sensor": {
-      "departure": {
-        "name": "Departure time"
-      },
-      "start": {
-        "name": "Start time"
-      },
-      "stop": {
-        "name": "Stop time"
-      },
-      "runtime": {
-        "name": "Runtime"
-      },
-      "temperature": {
-        "name": "Temperature"
-      },
-      "temperature_source": {
-        "name": "Temperature source"
+      "departure": { "name": "Departure time" },
+      "start": { "name": "Start time" },
+      "stop": { "name": "Stop time" },
+      "runtime": { "name": "Runtime" },
+      "temperature": { "name": "Temperature" },
+      "temperature_source": { "name": "Temperature source" },
+      "runtime_curve": {
+        "name": "Heating curve",
+        "state": {
+          "auto": "Automatic",
+          "manual": "Manual"
+        }
       },
       "status": {
         "name": "Status",
@@ -124,28 +103,16 @@
       }
     },
     "switch": {
-      "enabled": {
-        "name": "Enable"
-      },
-      "manual_active": {
-        "name": "Manual time"
-      }
+      "enabled": { "name": "Enable" },
+      "manual_active": { "name": "Manual time" }
     },
     "time": {
-      "workday_departure": {
-        "name": "Workday departure"
-      },
-      "manual_departure": {
-        "name": "Manual departure"
-      }
+      "workday_departure": { "name": "Workday departure" },
+      "manual_departure": { "name": "Manual departure" }
     },
     "button": {
-      "start_now": {
-        "name": "Start now"
-      },
-      "stop_now": {
-        "name": "Stop"
-      }
+      "start_now": { "name": "Start now" },
+      "stop_now": { "name": "Stop" }
     }
   }
 }

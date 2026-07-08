@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Motorvärmare",
-        "description": "Välj uttag, temperatursensorer, tider och grundinställningar. Markera manuell beräkning om du vill ange egen gångtidskurva i nästa steg.",
+        "description": "Välj uttag, temperatursensorer, tider och grundinställningar.\nMarkera manuell beräkning om du vill ange egen gångtidskurva i nästa steg.",
         "data": {
           "name": "Namn",
           "heater_switch": "Switch som ska styras",
@@ -34,14 +34,6 @@
           "runtime_curve_minus_25": "25 °C under gränsen",
           "runtime_curve_minus_30": "30 °C under gränsen"
         }
-      },
-      "runtime_method": {
-        "title": "Beräkningsmetod",
-        "description": "Välj hur gångtiden ska beräknas. Automatisk använder en färdig värmekurva. Manuell låter dig ange gångtid vid flera temperaturpunkter.",
-        "menu_options": {
-          "auto_runtime": "Automatisk beräkning",
-          "manual_curve": "Manuell beräkning"
-        }
       }
     }
   },
@@ -49,7 +41,7 @@
     "step": {
       "init": {
         "title": "Motorvärmare inställningar",
-        "description": "Ändra uttag, temperatursensorer, tider och grundinställningar. Markera manuell beräkning om du vill ange egen gångtidskurva i nästa steg.",
+        "description": "Ändra uttag, temperatursensorer, tider och grundinställningar.\nMarkera manuell beräkning om du vill ange egen gångtidskurva i nästa steg.",
         "data": {
           "heater_switch": "Switch som ska styras",
           "temp_sensors": "Temperatursensorer i prioritetsordning",
@@ -78,36 +70,23 @@
           "runtime_curve_minus_25": "25 °C under gränsen",
           "runtime_curve_minus_30": "30 °C under gränsen"
         }
-      },
-      "runtime_method": {
-        "title": "Beräkningsmetod",
-        "description": "Välj hur gångtiden ska beräknas. Automatisk använder en färdig värmekurva. Manuell låter dig ange gångtid vid flera temperaturpunkter.",
-        "menu_options": {
-          "auto_runtime": "Automatisk beräkning",
-          "manual_curve": "Manuell beräkning"
-        }
       }
     }
   },
   "entity": {
     "sensor": {
-      "departure": {
-        "name": "Avresetid"
-      },
-      "start": {
-        "name": "Starttid"
-      },
-      "stop": {
-        "name": "Stopptid"
-      },
-      "runtime": {
-        "name": "Gångtid"
-      },
-      "temperature": {
-        "name": "Temperatur"
-      },
-      "temperature_source": {
-        "name": "Temperaturkälla"
+      "departure": { "name": "Avresetid" },
+      "start": { "name": "Starttid" },
+      "stop": { "name": "Stopptid" },
+      "runtime": { "name": "Gångtid" },
+      "temperature": { "name": "Temperatur" },
+      "temperature_source": { "name": "Temperaturkälla" },
+      "runtime_curve": {
+        "name": "Värmekurva",
+        "state": {
+          "auto": "Automatisk",
+          "manual": "Manuell"
+        }
       },
       "status": {
         "name": "Status",
@@ -124,28 +103,16 @@
       }
     },
     "switch": {
-      "enabled": {
-        "name": "Aktivera"
-      },
-      "manual_active": {
-        "name": "Engångstid"
-      }
+      "enabled": { "name": "Aktivera" },
+      "manual_active": { "name": "Engångstid" }
     },
     "time": {
-      "workday_departure": {
-        "name": "Arbetsdag avresa"
-      },
-      "manual_departure": {
-        "name": "Manuell avresa"
-      }
+      "workday_departure": { "name": "Arbetsdag avresa" },
+      "manual_departure": { "name": "Manuell avresa" }
     },
     "button": {
-      "start_now": {
-        "name": "Starta nu"
-      },
-      "stop_now": {
-        "name": "Stoppa"
-      }
+      "start_now": { "name": "Starta nu" },
+      "stop_now": { "name": "Stoppa" }
     }
   }
 }
