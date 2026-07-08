@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Car heater",
-        "description": "Select outlet, temperature sensors, times and runtime model.",
+        "description": "Select outlet, temperature sensors, times and base settings. You select calculation method in the next step.",
         "data": {
           "name": "Name",
           "heater_switch": "Switch to control",
@@ -17,14 +17,14 @@
           "after_departure_minutes": "Stop after departure",
           "use_workday": "Use workday",
           "power_sensor": "Power sensor, optional",
-          "manual_runtime": "Manual runtime curve"
+          "manual_runtime": "Manual calculation"
         }
       },
       "manual_curve": {
         "title": "Manual runtime curve",
         "description": "Set how long the heater should run at different temperatures relative to the temperature limit.",
         "data": {
-          "manual_runtime": "Manual runtime curve",
+          "manual_runtime": "Manual calculation",
           "max_runtime": "Maximum runtime",
           "runtime_curve_limit": "At temperature limit",
           "runtime_curve_minus_5": "5 °C below limit",
@@ -34,6 +34,14 @@
           "runtime_curve_minus_25": "25 °C below limit",
           "runtime_curve_minus_30": "30 °C below limit"
         }
+      },
+      "runtime_method": {
+        "title": "Calculation method",
+        "description": "Choose how runtime should be calculated. Automatic uses a preset heating curve. Manual lets you set runtime at several temperature points.",
+        "menu_options": {
+          "auto_runtime": "Automatic calculation",
+          "manual_curve": "Manual calculation"
+        }
       }
     }
   },
@@ -41,7 +49,7 @@
     "step": {
       "init": {
         "title": "Car heater options",
-        "description": "Change outlet, temperature sensors, times and runtime model.",
+        "description": "Change outlet, temperature sensors, times and base settings. You select calculation method in the next step.",
         "data": {
           "heater_switch": "Switch to control",
           "temp_sensors": "Temperature sensors in priority order",
@@ -53,14 +61,14 @@
           "after_departure_minutes": "Stop after departure",
           "use_workday": "Use workday",
           "power_sensor": "Power sensor, optional",
-          "manual_runtime": "Manual runtime curve"
+          "manual_runtime": "Manual calculation"
         }
       },
       "manual_curve": {
         "title": "Manual runtime curve",
         "description": "Set how long the heater should run at different temperatures relative to the temperature limit.",
         "data": {
-          "manual_runtime": "Manual runtime curve",
+          "manual_runtime": "Manual calculation",
           "max_runtime": "Maximum runtime",
           "runtime_curve_limit": "At temperature limit",
           "runtime_curve_minus_5": "5 °C below limit",
@@ -69,6 +77,14 @@
           "runtime_curve_minus_20": "20 °C below limit",
           "runtime_curve_minus_25": "25 °C below limit",
           "runtime_curve_minus_30": "30 °C below limit"
+        }
+      },
+      "runtime_method": {
+        "title": "Calculation method",
+        "description": "Choose how runtime should be calculated. Automatic uses a preset heating curve. Manual lets you set runtime at several temperature points.",
+        "menu_options": {
+          "auto_runtime": "Automatic calculation",
+          "manual_curve": "Manual calculation"
         }
       }
     }
@@ -96,7 +112,14 @@
       "status": {
         "name": "Status",
         "state": {
-          "start_now": "Started now"
+          "start_now": "Started now",
+          "disabled": "Disabled",
+          "no_departure": "No departure",
+          "no_temperature": "No temperature",
+          "no_heating_needed": "No heating needed",
+          "waiting": "Waiting",
+          "running": "Running",
+          "finished": "Finished"
         }
       }
     },

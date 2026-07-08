@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Motorvärmare",
-        "description": "Välj uttag, temperatursensorer, tider och gångtidsmodell.",
+        "description": "Välj uttag, temperatursensorer, tider och grundinställningar. Markera manuell beräkning om du vill ange egen gångtidskurva i nästa steg.",
         "data": {
           "name": "Namn",
           "heater_switch": "Switch som ska styras",
@@ -17,14 +17,14 @@
           "after_departure_minutes": "Stoppa efter avresa",
           "use_workday": "Använd arbetsdag",
           "power_sensor": "Effektsensor, valfri",
-          "manual_runtime": "Manuell gångtidskurva"
+          "manual_runtime": "Manuell beräkning"
         }
       },
       "manual_curve": {
         "title": "Manuell gångtidskurva",
         "description": "Ange hur länge motorvärmaren ska gå vid olika temperaturer relativt temperaturgränsen.",
         "data": {
-          "manual_runtime": "Manuell gångtidskurva",
+          "manual_runtime": "Manuell beräkning",
           "max_runtime": "Längsta gångtid",
           "runtime_curve_limit": "Vid temperaturgränsen",
           "runtime_curve_minus_5": "5 °C under gränsen",
@@ -34,6 +34,14 @@
           "runtime_curve_minus_25": "25 °C under gränsen",
           "runtime_curve_minus_30": "30 °C under gränsen"
         }
+      },
+      "runtime_method": {
+        "title": "Beräkningsmetod",
+        "description": "Välj hur gångtiden ska beräknas. Automatisk använder en färdig värmekurva. Manuell låter dig ange gångtid vid flera temperaturpunkter.",
+        "menu_options": {
+          "auto_runtime": "Automatisk beräkning",
+          "manual_curve": "Manuell beräkning"
+        }
       }
     }
   },
@@ -41,7 +49,7 @@
     "step": {
       "init": {
         "title": "Motorvärmare inställningar",
-        "description": "Ändra uttag, temperatursensorer, tider och gångtidsmodell.",
+        "description": "Ändra uttag, temperatursensorer, tider och grundinställningar. Markera manuell beräkning om du vill ange egen gångtidskurva i nästa steg.",
         "data": {
           "heater_switch": "Switch som ska styras",
           "temp_sensors": "Temperatursensorer i prioritetsordning",
@@ -53,14 +61,14 @@
           "after_departure_minutes": "Stoppa efter avresa",
           "use_workday": "Använd arbetsdag",
           "power_sensor": "Effektsensor, valfri",
-          "manual_runtime": "Manuell gångtidskurva"
+          "manual_runtime": "Manuell beräkning"
         }
       },
       "manual_curve": {
         "title": "Manuell gångtidskurva",
         "description": "Ange hur länge motorvärmaren ska gå vid olika temperaturer relativt temperaturgränsen.",
         "data": {
-          "manual_runtime": "Manuell gångtidskurva",
+          "manual_runtime": "Manuell beräkning",
           "max_runtime": "Längsta gångtid",
           "runtime_curve_limit": "Vid temperaturgränsen",
           "runtime_curve_minus_5": "5 °C under gränsen",
@@ -69,6 +77,14 @@
           "runtime_curve_minus_20": "20 °C under gränsen",
           "runtime_curve_minus_25": "25 °C under gränsen",
           "runtime_curve_minus_30": "30 °C under gränsen"
+        }
+      },
+      "runtime_method": {
+        "title": "Beräkningsmetod",
+        "description": "Välj hur gångtiden ska beräknas. Automatisk använder en färdig värmekurva. Manuell låter dig ange gångtid vid flera temperaturpunkter.",
+        "menu_options": {
+          "auto_runtime": "Automatisk beräkning",
+          "manual_curve": "Manuell beräkning"
         }
       }
     }
