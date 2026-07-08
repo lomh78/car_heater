@@ -3,14 +3,17 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorEntityDescription
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .entity import CarHeaterEntity
-
 
 SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(key="departure", translation_key="departure", icon="mdi:clock"),
@@ -25,6 +28,7 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
     ),
     SensorEntityDescription(key="temperature_source", translation_key="temperature_source", icon="mdi:thermometer-lines"),
     SensorEntityDescription(key="status", translation_key="status", icon="mdi:car-clock"),
+    SensorEntityDescription(key="runtime_curve", translation_key="runtime_curve", icon="mdi:chart-bell-curve"),
 )
 
 
@@ -62,101 +66,118 @@ class CarHeaterSensor(CarHeaterEntity, SensorEntity):
             return data.temperature_source_name or data.temperature_source or "Ingen"
         if key == "status":
             return data.status
+        if key == "runtime_curve":
+            return data.runtime_mode
         return None
 
     @property
     def extra_state_attributes(self):
         data = self.coordinator.data
-        return {
-            "enabled": data.enabled,
-            "manual_active": data.manual_active,
-            "is_workday": data.is_workday,
-            "runtime_hours": data.runtime_hours,
-            "temperature_source": data.temperature_source,
-            "temperature_source_name": data.temperature_source_name,
-            "departure_datetime": data.departure.isoformat() if data.departure else None,
-            "start_datetime": data.start.isoformat() if data.start else None,
-            "stop_datetime": data.stop.isoformat() if data.stop else None,
-            "heater_switch_entity_id": data.heater_switch_entity_id,
-            "heater_switch_name": data.heater_switch_name,
-            "heater_switch_state": data.heater_switch_state,
-            "heater_switch_is_on": data.heater_switch_is_on,
-            "heater_switch_available": data.heater_switch_available,
-            "power_entity_id": data.power_entity_id,
-            "power_name": data.power_name,
-            "power": data.power,
-            "power_unit": data.power_unit,
-            "power_device_class": data.power_device_class,
-            "schedule_mode": data.schedule_mode,
-            "runtime_minutes": data.runtime_minutes,
-            "runtime_mode": data.runtime_mode,
-            "runtime_temp_limit": data.runtime_temp_limit,
-            "runtime_curve": data.runtime_curve or [],
-            "runtime_curve_mode": data.runtime_curve_mode,
-            "after_departure_minutes": data.after_departure_minutes,
-            "last_action": data.last_action,
-            "last_start": data.last_start.isoformat() if data.last_start else None,
-            "last_stop": data.last_stop.isoformat() if data.last_stop else None,
-            "current_start": data.current_start.isoformat() if data.current_start else None,
-            "current_stop": data.current_stop.isoformat() if data.current_stop else None,
-            "current_duration_minutes": data.current_duration_minutes,
-            "previous_start": data.previous_start.isoformat() if data.previous_start else None,
-            "previous_stop": data.previous_stop.isoformat() if data.previous_stop else None,
-            "previous_duration_minutes": data.previous_duration_minutes,
-            "planned_start": data.planned_start.isoformat() if data.planned_start else None,
-            "planned_stop": data.planned_stop.isoformat() if data.planned_stop else None,
-            "planned_departure": data.planned_departure.isoformat() if data.planned_departure else None,
-            "planned_duration_minutes": data.planned_duration_minutes,
-            "run_history": data.run_history or [],
-            "timeline": {
-                "history": data.run_history or [],
-                "previous": {
-                    "start": data.previous_start.isoformat() if data.previous_start else None,
-                    "stop": data.previous_stop.isoformat() if data.previous_stop else None,
-                    "duration_minutes": data.previous_duration_minutes,
-                },
-                "current": {
-                    "start": data.current_start.isoformat() if data.current_start else None,
-                    "stop": data.current_stop.isoformat() if data.current_stop else None,
-                    "duration_minutes": data.current_duration_minutes,
-                    "is_on": data.heater_switch_is_on,
-                },
-                "planned": {
-                    "start": data.planned_start.isoformat() if data.planned_start else None,
-                    "stop": data.planned_stop.isoformat() if data.planned_stop else None,
-                    "departure": data.planned_departure.isoformat() if data.planned_departure else None,
-                    "duration_minutes": data.planned_duration_minutes,
-                },
-            },
-            "heater_switch": {
-                "entity_id": data.heater_switch_entity_id,
-                "name": data.heater_switch_name,
-                "state": data.heater_switch_state,
-                "is_on": data.heater_switch_is_on,
-                "available": data.heater_switch_available,
-            },
-            "temperature": {
-                "entity_id": data.temperature_source,
-                "name": data.temperature_source_name,
-                "value": data.temperature,
-                "unit": "°C",
-            },
-            "runtime": {
-                "minutes": data.runtime_minutes,
-                "hours": data.runtime_hours,
+        attrs = _common_attributes(data)
+
+        if self.entity_description.key == "runtime_curve":
+            return {
                 "mode": data.runtime_mode,
                 "temperature_limit": data.runtime_temp_limit,
+                "max_runtime_minutes": int(round((data.runtime_hours or 0.0) * 60)),
                 "curve": data.runtime_curve or [],
                 "curve_mode": data.runtime_curve_mode,
+            }
+
+        return attrs
+
+
+def _common_attributes(data) -> dict:
+    return {
+        "enabled": data.enabled,
+        "manual_active": data.manual_active,
+        "is_workday": data.is_workday,
+        "runtime_hours": data.runtime_hours,
+        "temperature_source": data.temperature_source,
+        "temperature_source_name": data.temperature_source_name,
+        "departure_datetime": data.departure.isoformat() if data.departure else None,
+        "start_datetime": data.start.isoformat() if data.start else None,
+        "stop_datetime": data.stop.isoformat() if data.stop else None,
+        "heater_switch_entity_id": data.heater_switch_entity_id,
+        "heater_switch_name": data.heater_switch_name,
+        "heater_switch_state": data.heater_switch_state,
+        "heater_switch_is_on": data.heater_switch_is_on,
+        "heater_switch_available": data.heater_switch_available,
+        "power_entity_id": data.power_entity_id,
+        "power_name": data.power_name,
+        "power": data.power,
+        "power_unit": data.power_unit,
+        "power_device_class": data.power_device_class,
+        "schedule_mode": data.schedule_mode,
+        "runtime_minutes": data.runtime_minutes,
+        "runtime_mode": data.runtime_mode,
+        "runtime_temp_limit": data.runtime_temp_limit,
+        "runtime_curve": data.runtime_curve or [],
+        "runtime_curve_mode": data.runtime_curve_mode,
+        "after_departure_minutes": data.after_departure_minutes,
+        "last_action": data.last_action,
+        "last_start": data.last_start.isoformat() if data.last_start else None,
+        "last_stop": data.last_stop.isoformat() if data.last_stop else None,
+        "current_start": data.current_start.isoformat() if data.current_start else None,
+        "current_stop": data.current_stop.isoformat() if data.current_stop else None,
+        "current_duration_minutes": data.current_duration_minutes,
+        "previous_start": data.previous_start.isoformat() if data.previous_start else None,
+        "previous_stop": data.previous_stop.isoformat() if data.previous_stop else None,
+        "previous_duration_minutes": data.previous_duration_minutes,
+        "planned_start": data.planned_start.isoformat() if data.planned_start else None,
+        "planned_stop": data.planned_stop.isoformat() if data.planned_stop else None,
+        "planned_departure": data.planned_departure.isoformat() if data.planned_departure else None,
+        "planned_duration_minutes": data.planned_duration_minutes,
+        "run_history": data.run_history or [],
+        "timeline": {
+            "history": data.run_history or [],
+            "previous": {
+                "start": data.previous_start.isoformat() if data.previous_start else None,
+                "stop": data.previous_stop.isoformat() if data.previous_stop else None,
+                "duration_minutes": data.previous_duration_minutes,
             },
-            "power_sensor": {
-                "entity_id": data.power_entity_id,
-                "name": data.power_name,
-                "value": data.power,
-                "unit": data.power_unit,
-                "device_class": data.power_device_class,
+            "current": {
+                "start": data.current_start.isoformat() if data.current_start else None,
+                "stop": data.current_stop.isoformat() if data.current_stop else None,
+                "duration_minutes": data.current_duration_minutes,
+                "is_on": data.heater_switch_is_on,
             },
-        }
+            "planned": {
+                "start": data.planned_start.isoformat() if data.planned_start else None,
+                "stop": data.planned_stop.isoformat() if data.planned_stop else None,
+                "departure": data.planned_departure.isoformat() if data.planned_departure else None,
+                "duration_minutes": data.planned_duration_minutes,
+            },
+        },
+        "heater_switch": {
+            "entity_id": data.heater_switch_entity_id,
+            "name": data.heater_switch_name,
+            "state": data.heater_switch_state,
+            "is_on": data.heater_switch_is_on,
+            "available": data.heater_switch_available,
+        },
+        "temperature": {
+            "entity_id": data.temperature_source,
+            "name": data.temperature_source_name,
+            "value": data.temperature,
+            "unit": "°C",
+        },
+        "runtime": {
+            "minutes": data.runtime_minutes,
+            "hours": data.runtime_hours,
+            "mode": data.runtime_mode,
+            "temperature_limit": data.runtime_temp_limit,
+            "curve": data.runtime_curve or [],
+            "curve_mode": data.runtime_curve_mode,
+        },
+        "power_sensor": {
+            "entity_id": data.power_entity_id,
+            "name": data.power_name,
+            "value": data.power,
+            "unit": data.power_unit,
+            "device_class": data.power_device_class,
+        },
+    }
 
 
 def _fmt_dt(value: datetime | None) -> str:

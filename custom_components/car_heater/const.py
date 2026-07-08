@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 DOMAIN = "car_heater"
 NAME = "Car Heater"
 MANUFACTURER = "Custom"
-VERSION = "1.1.2"
+VERSION = "1.1.3"
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.TIME, Platform.BUTTON]
 
@@ -26,7 +26,7 @@ CONF_MIN_RUNTIME = "min_runtime"
 CONF_MAX_RUNTIME = "max_runtime"
 CONF_AFTER_DEPARTURE_MINUTES = "after_departure_minutes"
 CONF_MANUAL_RUNTIME = "manual_runtime"
-CONF_RUNTIME_MINUTES_PER_DEGREE = "runtime_minutes_per_degree"  # legacy option, kept for migration/backwards compatibility
+CONF_RUNTIME_MINUTES_PER_DEGREE = "runtime_minutes_per_degree"  # legacy option
 CONF_RUNTIME_CURVE_LIMIT = "runtime_curve_limit"
 CONF_RUNTIME_CURVE_MINUS_5 = "runtime_curve_minus_5"
 CONF_RUNTIME_CURVE_MINUS_10 = "runtime_curve_minus_10"
@@ -46,8 +46,10 @@ DEFAULT_MAX_RUNTIME = 4.0
 DEFAULT_AFTER_DEPARTURE_MINUTES = 10
 DEFAULT_MANUAL_RUNTIME = False
 DEFAULT_RUNTIME_MINUTES_PER_DEGREE = 5.0  # legacy default
-# Automatic runtime curve. X is degrees below the configured temperature limit, Y is runtime in minutes.
-# The default curve is intentionally non-linear: runtime increases faster in colder weather.
+
+# Automatic runtime curve. X is degrees below the configured temperature limit,
+# Y is runtime in minutes. The default curve is intentionally non-linear:
+# runtime increases faster in colder weather.
 DEFAULT_AUTO_RUNTIME_CURVE = (
     (0.0, 0),
     (5.0, 20),
@@ -71,11 +73,11 @@ MANUAL_RUNTIME_CURVE_FIELDS = (
     (CONF_RUNTIME_CURVE_MINUS_30, 30.0, 190),
 )
 DEFAULT_MANUAL_RUNTIME_CURVE = tuple((delta, minutes) for _, delta, minutes in MANUAL_RUNTIME_CURVE_FIELDS)
+
 DEFAULT_SCAN_INTERVAL = timedelta(minutes=1)
 
 STORE_VERSION = 2
 STORE_KEY = "runtime"
-
 STATE_ENABLED = "enabled"
 STATE_MANUAL_ACTIVE = "manual_active"
 STATE_START_NOW_ACTIVE = "start_now_active"
