@@ -68,6 +68,7 @@ class CarHeaterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Configure a manual runtime curve during setup."""
         if user_input is not None:
             data = {**self._pending_data, **_clean_curve_input(user_input)}
+            data[CONF_MANUAL_RUNTIME] = True
             await self.async_set_unique_id(DOMAIN)
             self._abort_if_unique_id_configured()
             title = data.pop(CONF_NAME, NAME)
@@ -115,6 +116,7 @@ class CarHeaterOptionsFlow(config_entries.OptionsFlow):
             data = {**self._pending_options, **_clean_curve_input(user_input)}
             # Only store options, not the config entry title/name.
             data.pop(CONF_NAME, None)
+            data[CONF_MANUAL_RUNTIME] = True
             return self.async_create_entry(title="", data=data)
 
         return self.async_show_form(
