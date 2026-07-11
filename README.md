@@ -89,12 +89,6 @@ It provides:
 
 ---
 
-## Screenshots
-
-(Add screenshots here)
-
----
-
 ## Requirements
 
 - Home Assistant 2025.6 or newer
