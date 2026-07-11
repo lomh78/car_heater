@@ -1,60 +1,107 @@
-<p align="center">
-  <img src="docs/images/logo.png" width="180" alt="Car Heater logo">
-</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark_logo.png">
+  <img alt="Car Heater Logo" src="docs/images/logo.png">
+</picture>
 
-# Car Heater
+# 🚗 Car Heater
 
-A Home Assistant custom integration for engine block heaters / car heaters.
+A Home Assistant integration for controlling engine heaters (block heaters) with intelligent pre-heating based on outdoor temperature and departure time.
+
+The integration automatically calculates the optimal heating time and provides sensors and controls that can be used in dashboards, automations and the included Car Heater Card.
+
+---
 
 ## Features
 
-- Temperature-based runtime calculation
-- Multiple temperature sensor fallback
-- Optional workday schedule
-- Manual departure time
-- Start now and stop buttons
+- 🚗 Automatic runtime calculation
+- 📈 Configurable heating curve
+- ✏️ Manual runtime configuration
+- 🕒 Manual, Workday and One-Time departure
+- 📅 Workday support
+- 📊 Runtime history
+- 🌡 Temperature history
+- ⚡ Power history
+- 🔥 Heating Curve sensor
+- 🎯 Timeline support
+- 🌍 English and Swedish translations
+- 🧩 Fully configurable through the Home Assistant UI
+- ❤️ HACS compatible
+
+---
+
+## Installation
+
+### HACS
+
+Search for **Car Heater** in HACS and install the integration.
+
+Restart Home Assistant after installation.
+
+---
+
+## Configuration
+
+After installation, add the integration from:
+
+Settings → Devices & Services → Add Integration
+
+Select:
+
+- Temperature sensor
+- Heater switch
 - Optional power sensor
-- Custom Lovelace card
-- Swedish and English translations
-- Prepared for HACS/GitHub releases
 
-## Installation: integration
+Configure:
 
-Copy this folder to Home Assistant:
+- Temperature limit
+- Longest runtime
+- Automatic or manual runtime calculation
+- Departure times
+- Workday options
 
-```text
-custom_components/car_heater
-```
+---
 
-Restart Home Assistant and add **Car Heater** from **Settings → Devices & services**.
+## Sensors
 
-## Installation: custom card
+The integration creates several entities including:
 
-Copy this folder to Home Assistant:
+- Status
+- Runtime
+- Start time
+- Stop time
+- Heating Curve
+- Timeline
 
-```text
-www/community/car-heater-card
-```
+---
 
-Add this Lovelace resource:
+## Companion Card
 
-```yaml
-url: /local/community/car-heater-card/car-heater-card.js
- type: module
-```
+For the best user experience install the companion **Car Heater Card**.
 
-## Example card
+It provides:
 
-```yaml
-type: custom:car-heater-card
-# Add the entity IDs created by the integration here
-```
+- Timeline
+- Runtime history
+- Temperature graph
+- Power graph
+- Heating Curve
+- One-Time Departure slider
 
-## Project layout
+---
 
-```text
-custom_components/car_heater/       Home Assistant integration
-custom_card/car-heater-card/        Lovelace custom card
-docs/images/                        Logo and documentation images
-.github/workflows/                  Release ZIP workflow
-```
+## Screenshots
+
+(Add screenshots here)
+
+---
+
+## Requirements
+
+- Home Assistant 2025.6 or newer
+- HACS (recommended)
+
+---
+
+## License
+
+MIT License
