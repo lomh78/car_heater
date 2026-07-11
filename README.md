@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark_logo.png">
-  <img alt="Car Heater Logo" src="docs/images/logo.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark_logo.png" width="250">
+  <img alt="Car Heater Logo" src="docs/images/logo.png" width="250">
 </picture>
 
 # 🚗 Car Heater
