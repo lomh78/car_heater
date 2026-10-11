@@ -1,7 +1,7 @@
 """Coordinator and calculation logic for Motorvärmare."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, time, timedelta
 import logging
 from typing import Any
@@ -48,6 +48,10 @@ from .const import (
     STATE_PREVIOUS_START,
     STATE_PREVIOUS_STOP,
     STATE_RUN_HISTORY,
+    STATE_SCHEDULED_STOP,
+    STATE_SCHEDULED_START,
+    STATE_SCHEDULED_DEPARTURE,
+    STATE_SCHEDULED_MODE,
     DEFAULT_RUN_HISTORY_LIMIT,
     STATUS_DISABLED,
     STATUS_FINISHED,
@@ -139,6 +143,10 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         self.previous_stop: str | None = None
         self.run_history: list[dict[str, Any]] = []
         self._previous_status: str | None = None
+        self.scheduled_stop: str | None = None
+        self.scheduled_start: str | None = None
+        self.scheduled_departure: str | None = None
+        self.scheduled_mode: str | None = None
 
     @property
     def config(self) -> dict[str, Any]:
@@ -166,6 +174,10 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             self.current_stop = stored.get(STATE_CURRENT_STOP)
             self.previous_start = stored.get(STATE_PREVIOUS_START)
             self.previous_stop = stored.get(STATE_PREVIOUS_STOP)
+            self.scheduled_stop = stored.get(STATE_SCHEDULED_STOP)
+            self.scheduled_start = stored.get(STATE_SCHEDULED_START)
+            self.scheduled_departure = stored.get(STATE_SCHEDULED_DEPARTURE)
+            self.scheduled_mode = stored.get(STATE_SCHEDULED_MODE)
             history = stored.get(STATE_RUN_HISTORY, [])
             self.run_history = history if isinstance(history, list) else []
 
@@ -184,18 +196,47 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
                 STATE_PREVIOUS_START: self.previous_start,
                 STATE_PREVIOUS_STOP: self.previous_stop,
                 STATE_RUN_HISTORY: self.run_history[-DEFAULT_RUN_HISTORY_LIMIT:],
+                STATE_SCHEDULED_STOP: self.scheduled_stop,
+                STATE_SCHEDULED_START: self.scheduled_start,
+                STATE_SCHEDULED_DEPARTURE: self.scheduled_departure,
+                STATE_SCHEDULED_MODE: self.scheduled_mode,
             }
         )
 
+    def _clear_scheduled_run(self) -> None:
+        self.scheduled_stop = None
+        self.scheduled_start = None
+        self.scheduled_departure = None
+        self.scheduled_mode = None
+
     async def async_set_enabled(self, enabled: bool) -> None:
+        if not enabled:
+            self._clear_scheduled_run()
         self.enabled = enabled
         await self._async_save()
         await self.async_request_refresh()
 
     async def async_set_manual_active(self, active: bool) -> None:
+        """Apply an explicit one-time toggle before recalculating the schedule.
+
+        Publish the requested switch state immediately, rather than leaving the
+        previous coordinator snapshot visible during the asynchronous refresh.
+        """
+        if self.manual_active == active:
+            return
+
+        self._clear_scheduled_run()
         self.manual_active = active
         if active:
             self.enabled = True
+
+        # The switch entity reads coordinator.data, not self.manual_active.
+        # Keep both in sync before any awaited I/O can expose stale state.
+        if self.data is not None:
+            self.async_set_updated_data(
+                replace(self.data, manual_active=active, enabled=self.enabled)
+            )
+
         await self._async_save()
         await self.async_request_refresh()
 
@@ -209,6 +250,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         if stop <= now:
             stop = now + timedelta(minutes=max(after_minutes, 1))
 
+        self._clear_scheduled_run()
         self.start_now_active = True
         self.enabled = True
         self.start_now_started = now.isoformat()
@@ -248,6 +290,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
 
     async def async_stop_now(self) -> None:
         """Stop the heater and clear immediate/manual run modes."""
+        self._clear_scheduled_run()
         self.start_now_active = False
         self.manual_active = False
         self.start_now_started = None
@@ -267,13 +310,46 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         await self.async_request_refresh()
 
     async def async_set_time(self, key: str, value: time) -> None:
+        # A manual departure edit is an explicit rescheduling request, unlike
+        # temperature changes. Update the persisted run before updating options,
+        # because an options update may reload the config entry.
+        if key == CONF_MANUAL_DEPARTURE and self.manual_active and self.scheduled_mode == "manual":
+            old_departure = self._parse_dt(self.scheduled_departure)
+            if old_departure is not None:
+                departure = datetime.combine(old_departure.date(), value, tzinfo=old_departure.tzinfo)
+                stop = departure + timedelta(minutes=int(self.config.get(
+                    CONF_AFTER_DEPARTURE_MINUTES, DEFAULT_AFTER_DEPARTURE_MINUTES
+                )))
+                self.scheduled_departure = departure.isoformat()
+                self.scheduled_stop = stop.isoformat()
+                # Preserve the actual run start. Do not recalculate it from
+                # temperature while the heater is already running.
+                await self._async_save()
+
         options = dict(self.entry.options)
         options[key] = value.strftime("%H:%M")
         self.hass.config_entries.async_update_entry(self.entry, options=options)
         await self.async_request_refresh()
 
     async def _async_update_data(self) -> HeaterData:
-        data = self._calculate(dt_util.now())
+        now = dt_util.now()
+        # Clear an expired lock before calculating the next schedule.
+        locked_stop = self._parse_dt(self.scheduled_stop)
+        if self.scheduled_stop and (locked_stop is None or now >= locked_stop):
+            # The one-time departure has been consumed when its locked run ends.
+            # Clear it before recalculating, otherwise it rolls over to tomorrow.
+            # Preserve the normal behavior for a newly selected one-time time
+            # that has already passed today (no completed run lock exists).
+            completed_manual_run = self.scheduled_mode == "manual"
+            self._clear_scheduled_run()
+            if completed_manual_run:
+                self.manual_active = False
+            # A restart may have reset _previous_status. An expired persisted
+            # lock still represents a run we must switch off if it is on.
+            if locked_stop is not None and now >= locked_stop:
+                self._previous_status = STATUS_RUNNING
+            await self._async_save()
+        data = self._calculate(now)
         await self._control_switch(data)
         self._previous_status = data.status
         return data
@@ -503,6 +579,21 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             self._set_timeline_durations(base, now)
             return base
 
+        # Once a scheduled run has started, keep its original end time and
+        # timeline even if the outdoor temperature changes or disappears.
+        locked_stop = self._parse_dt(self.scheduled_stop)
+        if locked_stop is not None and now < locked_stop:
+            base.schedule_mode = self.scheduled_mode or "workday"
+            base.start = self._parse_dt(self.scheduled_start)
+            base.planned_start = base.start
+            base.departure = self._parse_dt(self.scheduled_departure)
+            base.planned_departure = base.departure
+            base.stop = locked_stop
+            base.planned_stop = locked_stop
+            base.status = STATUS_RUNNING
+            self._set_timeline_durations(base, now)
+            return base
+
         roll_to_tomorrow = True
         if self.manual_active:
             departure_time = self._get_time(CONF_MANUAL_DEPARTURE, DEFAULT_MANUAL_DEPARTURE)
@@ -525,7 +616,9 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             now,
             roll_to_tomorrow_after_stop=roll_to_tomorrow,
         )
-        start = departure - timedelta(hours=runtime) if runtime > 0 else None
+        # Scheduler ticks on whole minutes. Round the start DOWN to a whole
+        # minute so the displayed HH:MM matches the minute it actually starts.
+        start = (departure - timedelta(hours=runtime)).replace(second=0, microsecond=0) if runtime > 0 else None
         stop = departure + timedelta(
             minutes=int(self.config.get(CONF_AFTER_DEPARTURE_MINUTES, DEFAULT_AFTER_DEPARTURE_MINUTES))
         )
@@ -611,6 +704,13 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
                 data.last_start = self._parse_dt(self.last_start)
                 data.last_stop = self._parse_dt(self.last_stop)
                 self._set_timeline_durations(data, dt_util.now())
+
+        if should_be_on and data.status == STATUS_RUNNING and not self.scheduled_stop and data.stop:
+            self.scheduled_stop = data.stop.isoformat()
+            self.scheduled_start = data.start.isoformat() if data.start else None
+            self.scheduled_departure = data.departure.isoformat() if data.departure else None
+            self.scheduled_mode = data.schedule_mode
+            await self._async_save()
 
         if should_be_on and not is_on:
             start_time = dt_util.now().replace(microsecond=0).isoformat()

@@ -39,3 +39,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Delete only the persistent runtime data for a removed config entry."""
+    from homeassistant.helpers.storage import Store
+
+    from .const import STORE_KEY, STORE_VERSION
+
+    store = Store(hass, STORE_VERSION, f"{DOMAIN}.{entry.entry_id}.{STORE_KEY}")
+    await store.async_remove()
