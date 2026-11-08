@@ -236,14 +236,27 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         self.manual_active = active
         if active:
             self.enabled = True
-            # Default to today each time one-time scheduling is enabled.
-            self.manual_date = dt_util.now().date().isoformat()
+            # Keep a date explicitly selected before activation. Only use
+            # today when no one-time departure date has been set yet.
+            if not self.manual_date:
+                self.manual_date = dt_util.now().date().isoformat()
 
         # The switch entity reads coordinator.data, not self.manual_active.
         # Keep both in sync before any awaited I/O can expose stale state.
         if self.data is not None:
             self.async_set_updated_data(
-                replace(self.data, manual_active=active, enabled=self.enabled)
+                replace(
+                    self.data,
+                    manual_active=active,
+                    enabled=self.enabled,
+                    departure=None,
+                    start=None,
+                    stop=None,
+                    planned_departure=None,
+                    planned_start=None,
+                    planned_stop=None,
+                    schedule_mode="manual" if active else None,
+                )
             )
 
         await self._async_save()
@@ -658,14 +671,13 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             except ValueError:
                 chosen_date = now.date()
             departure = datetime.combine(chosen_date, departure_time, tzinfo=now.tzinfo)
-            # When today's default date has passed, preserve legacy next-day
-            # behavior until the user explicitly chooses a future date.
+            # A one-time departure is a fixed calendar date and clock time.
+            # Never combine the Workday date with the one-time clock time, and
+            # never silently move an explicitly selected date to tomorrow.
             after = timedelta(minutes=int(self.config.get(
                 CONF_AFTER_DEPARTURE_MINUTES, DEFAULT_AFTER_DEPARTURE_MINUTES
             )))
-            if chosen_date == now.date() and now > departure + after:
-                departure += timedelta(days=1)
-            if departure + after < now:
+            if departure + after <= now:
                 departure = None
             base.schedule_mode = "manual"
         elif self.use_workday:

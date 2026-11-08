@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 DOMAIN = "car_heater"
 NAME = "Car Heater"
 MANUFACTURER = "Custom"
-VERSION = "1.1.9-beta1"
+VERSION = "1.1.9-beta3"
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.TIME, Platform.DATE, Platform.BUTTON]
 
