@@ -17,7 +17,8 @@
           "after_departure_minutes": "Stop after departure",
           "use_workday": "Use workday",
           "power_sensor": "Power sensor, optional",
-          "manual_runtime": "Manual calculation"
+          "manual_runtime": "Manual calculation",
+          "workday_calendar": "Workday calendar, optional"
         }
       },
       "manual_curve": {
@@ -53,7 +54,8 @@
           "after_departure_minutes": "Stop after departure",
           "use_workday": "Use workday",
           "power_sensor": "Power sensor, optional",
-          "manual_runtime": "Manual calculation"
+          "manual_runtime": "Manual calculation",
+          "workday_calendar": "Workday calendar, optional"
         }
       },
       "manual_curve": {
@@ -75,12 +77,24 @@
   },
   "entity": {
     "sensor": {
-      "departure": { "name": "Departure time" },
-      "start": { "name": "Start time" },
-      "stop": { "name": "Stop time" },
-      "runtime": { "name": "Runtime" },
-      "temperature": { "name": "Temperature" },
-      "temperature_source": { "name": "Temperature source" },
+      "departure": {
+        "name": "Departure time"
+      },
+      "start": {
+        "name": "Start time"
+      },
+      "stop": {
+        "name": "Stop time"
+      },
+      "runtime": {
+        "name": "Runtime"
+      },
+      "temperature": {
+        "name": "Temperature"
+      },
+      "temperature_source": {
+        "name": "Temperature source"
+      },
       "runtime_curve": {
         "name": "Heating curve",
         "state": {
@@ -103,16 +117,33 @@
       }
     },
     "switch": {
-      "enabled": { "name": "Enable" },
-      "manual_active": { "name": "Manual time" }
+      "enabled": {
+        "name": "Enable"
+      },
+      "manual_active": {
+        "name": "Manual time"
+      }
     },
     "time": {
-      "workday_departure": { "name": "Workday departure" },
-      "manual_departure": { "name": "Manual departure" }
+      "workday_departure": {
+        "name": "Workday departure"
+      },
+      "manual_departure": {
+        "name": "Manual departure"
+      }
     },
     "button": {
-      "start_now": { "name": "Start now" },
-      "stop_now": { "name": "Stop" }
+      "start_now": {
+        "name": "Start now"
+      },
+      "stop_now": {
+        "name": "Stop"
+      }
+    },
+    "date": {
+      "manual_date": {
+        "name": "One-time departure date"
+      }
     }
   }
 }

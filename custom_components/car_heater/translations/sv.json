@@ -17,7 +17,8 @@
           "after_departure_minutes": "Stoppa efter avresa",
           "use_workday": "Använd arbetsdag",
           "power_sensor": "Effektsensor, valfri",
-          "manual_runtime": "Manuell beräkning"
+          "manual_runtime": "Manuell beräkning",
+          "workday_calendar": "Arbetsdagskalender, valfri"
         }
       },
       "manual_curve": {
@@ -53,7 +54,8 @@
           "after_departure_minutes": "Stoppa efter avresa",
           "use_workday": "Använd arbetsdag",
           "power_sensor": "Effektsensor, valfri",
-          "manual_runtime": "Manuell beräkning"
+          "manual_runtime": "Manuell beräkning",
+          "workday_calendar": "Arbetsdagskalender, valfri"
         }
       },
       "manual_curve": {
@@ -75,12 +77,24 @@
   },
   "entity": {
     "sensor": {
-      "departure": { "name": "Avresetid" },
-      "start": { "name": "Starttid" },
-      "stop": { "name": "Stopptid" },
-      "runtime": { "name": "Gångtid" },
-      "temperature": { "name": "Temperatur" },
-      "temperature_source": { "name": "Temperaturkälla" },
+      "departure": {
+        "name": "Avresetid"
+      },
+      "start": {
+        "name": "Starttid"
+      },
+      "stop": {
+        "name": "Stopptid"
+      },
+      "runtime": {
+        "name": "Gångtid"
+      },
+      "temperature": {
+        "name": "Temperatur"
+      },
+      "temperature_source": {
+        "name": "Temperaturkälla"
+      },
       "runtime_curve": {
         "name": "Värmekurva",
         "state": {
@@ -103,16 +117,33 @@
       }
     },
     "switch": {
-      "enabled": { "name": "Aktivera" },
-      "manual_active": { "name": "Engångstid" }
+      "enabled": {
+        "name": "Aktivera"
+      },
+      "manual_active": {
+        "name": "Engångstid"
+      }
     },
     "time": {
-      "workday_departure": { "name": "Arbetsdag avresa" },
-      "manual_departure": { "name": "Manuell avresa" }
+      "workday_departure": {
+        "name": "Arbetsdag avresa"
+      },
+      "manual_departure": {
+        "name": "Manuell avresa"
+      }
     },
     "button": {
-      "start_now": { "name": "Starta nu" },
-      "stop_now": { "name": "Stoppa" }
+      "start_now": {
+        "name": "Starta nu"
+      },
+      "stop_now": {
+        "name": "Stoppa"
+      }
+    },
+    "date": {
+      "manual_date": {
+        "name": "Datum för engångstid"
+      }
     }
   }
 }

@@ -8,13 +8,15 @@ from homeassistant.const import Platform
 DOMAIN = "car_heater"
 NAME = "Car Heater"
 MANUFACTURER = "Custom"
-VERSION = "1.1.8"
+VERSION = "1.1.9-beta1"
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.TIME, Platform.BUTTON]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.TIME, Platform.DATE, Platform.BUTTON]
 
 CONF_HEATER_SWITCH = "heater_switch"
 CONF_TEMP_SENSORS = "temp_sensors"
 CONF_WORKDAY_SENSOR = "workday_sensor"
+CONF_WORKDAY_CALENDAR = "workday_calendar"
+STATE_MANUAL_DATE = "manual_date"
 CONF_POWER_SENSOR = "power_sensor"
 CONF_USE_WORKDAY = "use_workday"
 CONF_WORKDAY_DEPARTURE = "workday_departure"

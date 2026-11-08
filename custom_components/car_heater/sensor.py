@@ -53,11 +53,11 @@ class CarHeaterSensor(CarHeaterEntity, SensorEntity):
         key = self.entity_description.key
 
         if key == "departure":
-            return _fmt_dt(data.departure)
+            return _fmt_dt(data.departure) if data.departure else _no_time_text(data)
         if key == "start":
-            return _fmt_dt(data.start) if data.start else "Aldrig"
+            return _fmt_dt(data.start) if data.start else _no_time_text(data)
         if key == "stop":
-            return _fmt_dt(data.stop)
+            return _fmt_dt(data.stop) if data.stop and data.start else _no_time_text(data)
         if key == "runtime":
             return _fmt_runtime(data.runtime_hours)
         if key == "temperature":
@@ -180,10 +180,18 @@ def _common_attributes(data) -> dict:
     }
 
 
+def _no_time_text(data) -> str:
+    if not data.enabled:
+        return "Inaktiv"
+    if data.departure is not None and data.temperature is not None and data.runtime_hours <= 0:
+        return "Över gränsen"
+    return "Ingen avresa"
+
+
 def _fmt_dt(value: datetime | None) -> str:
     if value is None:
         return "--:--"
-    return value.strftime("%H:%M")
+    return value.strftime("%Y-%m-%d %H:%M")
 
 
 def _fmt_runtime(hours: float | None) -> str:

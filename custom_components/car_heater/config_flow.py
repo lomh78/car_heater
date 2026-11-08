@@ -21,6 +21,7 @@ from .const import (
     CONF_TEMP_SENSORS,
     CONF_WORKDAY_DEPARTURE,
     CONF_WORKDAY_SENSOR,
+    CONF_WORKDAY_CALENDAR,
     CONF_USE_WORKDAY,
     DEFAULT_AFTER_DEPARTURE_MINUTES,
     DEFAULT_MANUAL_DEPARTURE,
@@ -135,6 +136,8 @@ def _clean_user_input(user_input: dict[str, Any], include_name: bool = True) -> 
     data[CONF_USE_WORKDAY] = bool(data.get(CONF_USE_WORKDAY, DEFAULT_USE_WORKDAY))
     data[CONF_MANUAL_RUNTIME] = bool(data.get(CONF_MANUAL_RUNTIME, DEFAULT_MANUAL_RUNTIME))
 
+    if not data.get(CONF_WORKDAY_CALENDAR):
+        data.pop(CONF_WORKDAY_CALENDAR, None)
     if not data.get(CONF_WORKDAY_SENSOR):
         data.pop(CONF_WORKDAY_SENSOR, None)
     if not data.get(CONF_POWER_SENSOR):
@@ -171,6 +174,9 @@ def _main_schema(defaults: dict[str, Any] | None = None, include_name: bool = Tr
             vol.Required(CONF_USE_WORKDAY, default=defaults.get(CONF_USE_WORKDAY, DEFAULT_USE_WORKDAY)): selector.BooleanSelector(),
             vol.Optional(CONF_TEMP_SENSORS, default=defaults.get(CONF_TEMP_SENSORS, [])): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="sensor", multiple=True)
+            ),
+            vol.Optional(CONF_WORKDAY_CALENDAR, default=defaults.get(CONF_WORKDAY_CALENDAR)): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="calendar")
             ),
             vol.Optional(CONF_WORKDAY_SENSOR, default=defaults.get(CONF_WORKDAY_SENSOR)): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="binary_sensor")
