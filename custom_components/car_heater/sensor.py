@@ -201,7 +201,5 @@ def _fmt_dt(value: datetime | None) -> str:
 def _fmt_runtime(hours: float | None) -> str:
     if not hours or hours <= 0:
         return "00:00"
-    seconds = int(round(hours * 3600))
-    td = timedelta(seconds=seconds)
-    total_minutes = int(td.total_seconds() // 60)
+    total_minutes = int(round(hours * 60))
     return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
