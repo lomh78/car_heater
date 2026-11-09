@@ -9,7 +9,6 @@
           "name": "Namn",
           "heater_switch": "Switch som ska styras",
           "temp_sensors": "Temperatursensorer i prioritetsordning",
-          "workday_sensor": "Arbetsdagssensor, valfri",
           "workday_departure": "Avresetid arbetsdag",
           "manual_departure": "Avresetid engångstid",
           "temp_limit": "Temperaturgräns",
@@ -46,7 +45,6 @@
         "data": {
           "heater_switch": "Switch som ska styras",
           "temp_sensors": "Temperatursensorer i prioritetsordning",
-          "workday_sensor": "Arbetsdagssensor, valfri",
           "workday_departure": "Avresetid arbetsdag",
           "manual_departure": "Avresetid engångstid",
           "temp_limit": "Temperaturgräns",

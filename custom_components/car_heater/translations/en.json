@@ -9,7 +9,6 @@
           "name": "Name",
           "heater_switch": "Switch to control",
           "temp_sensors": "Temperature sensors in priority order",
-          "workday_sensor": "Workday sensor, optional",
           "workday_departure": "Workday departure time",
           "manual_departure": "Manual departure time",
           "temp_limit": "Temperature limit",
@@ -46,7 +45,6 @@
         "data": {
           "heater_switch": "Switch to control",
           "temp_sensors": "Temperature sensors in priority order",
-          "workday_sensor": "Workday sensor, optional",
           "workday_departure": "Workday departure time",
           "manual_departure": "Manual departure time",
           "temp_limit": "Temperature limit",

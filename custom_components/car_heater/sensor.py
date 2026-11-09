@@ -96,6 +96,8 @@ def _common_attributes(data) -> dict:
         "temperature_source": data.temperature_source,
         "temperature_source_name": data.temperature_source_name,
         "departure_datetime": data.departure.isoformat() if data.departure else None,
+        "manual_departure_passed": data.manual_departure_passed,
+        "selected_manual_departure": data.selected_manual_departure.isoformat() if data.selected_manual_departure else None,
         "start_datetime": data.start.isoformat() if data.start else None,
         "stop_datetime": data.stop.isoformat() if data.stop else None,
         "heater_switch_entity_id": data.heater_switch_entity_id,
@@ -183,6 +185,8 @@ def _common_attributes(data) -> dict:
 def _no_time_text(data) -> str:
     if not data.enabled:
         return "Inaktiv"
+    if data.manual_departure_passed:
+        return "Tiden har passerat"
     if data.departure is not None and data.temperature is not None and data.runtime_hours <= 0:
         return "Över gränsen"
     return "Ingen avresa"

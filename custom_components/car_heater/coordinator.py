@@ -23,7 +23,6 @@ from .const import (
     CONF_TEMP_LIMIT,
     CONF_TEMP_SENSORS,
     CONF_WORKDAY_DEPARTURE,
-    CONF_WORKDAY_SENSOR,
     CONF_WORKDAY_CALENDAR,
     STATE_MANUAL_DATE,
     CONF_USE_WORKDAY,
@@ -79,6 +78,8 @@ class HeaterData:
     manual_active: bool = False
     start_now_active: bool = False
     is_workday: bool | None = None
+    manual_departure_passed: bool = False
+    selected_manual_departure: datetime | None = None
     temperature: float | None = None
     temperature_source: str | None = None
     temperature_source_name: str | None = None
@@ -538,15 +539,6 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         runtime_minutes = min(runtime_minutes, max_minutes)
         return round(runtime_minutes / 60, 2)
 
-    def _is_workday(self) -> bool | None:
-        entity_id = self.config.get(CONF_WORKDAY_SENSOR)
-        if not entity_id:
-            return None
-        state = self.hass.states.get(str(entity_id))
-        if state is None or state.state in BAD_STATES:
-            return None
-        return state.state == STATE_ON
-
     def _parse_dt(self, value: str | None) -> datetime | None:
         if not value:
             return None
@@ -587,7 +579,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
     def _calculate(self, now: datetime) -> HeaterData:
         temperature, source, source_name = self._first_valid_temperature()
         runtime = self._runtime_from_temperature(temperature)
-        is_workday = self._is_workday() if self.use_workday else None
+        is_workday = (now.date() in self._workday_dates) if self.use_workday and self.config.get(CONF_WORKDAY_CALENDAR) else None
         switch_state = self.hass.states.get(self.heater_switch)
         power, power_entity_id, power_name, power_unit, power_device_class = self._current_power()
 
@@ -671,6 +663,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             except ValueError:
                 chosen_date = now.date()
             departure = datetime.combine(chosen_date, departure_time, tzinfo=now.tzinfo)
+            base.selected_manual_departure = departure
             # A one-time departure is a fixed calendar date and clock time.
             # Never combine the Workday date with the one-time clock time, and
             # never silently move an explicitly selected date to tomorrow.
@@ -678,6 +671,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
                 CONF_AFTER_DEPARTURE_MINUTES, DEFAULT_AFTER_DEPARTURE_MINUTES
             )))
             if departure + after <= now:
+                base.manual_departure_passed = True
                 departure = None
             base.schedule_mode = "manual"
         elif self.use_workday:
@@ -691,10 +685,6 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
                     if candidate + after > now:
                         departure = candidate
                         break
-            elif is_workday is True:
-                candidate = datetime.combine(now.date(), departure_time, tzinfo=now.tzinfo)
-                if candidate + after > now:
-                    departure = candidate
             base.schedule_mode = "workday"
 
         if departure is None:
