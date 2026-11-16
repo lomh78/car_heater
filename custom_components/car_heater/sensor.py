@@ -53,11 +53,11 @@ class CarHeaterSensor(CarHeaterEntity, SensorEntity):
         key = self.entity_description.key
 
         if key == "departure":
-            return _fmt_dt(data.departure)
+            return _fmt_dt(data.departure) if data.departure else _no_time_text(data)
         if key == "start":
-            return _fmt_dt(data.start) if data.start else "Aldrig"
+            return _fmt_dt(data.start) if data.start else _no_time_text(data)
         if key == "stop":
-            return _fmt_dt(data.stop)
+            return _fmt_dt(data.stop) if data.stop and data.start else _no_time_text(data)
         if key == "runtime":
             return _fmt_runtime(data.runtime_hours)
         if key == "temperature":
@@ -96,6 +96,8 @@ def _common_attributes(data) -> dict:
         "temperature_source": data.temperature_source,
         "temperature_source_name": data.temperature_source_name,
         "departure_datetime": data.departure.isoformat() if data.departure else None,
+        "manual_departure_passed": data.manual_departure_passed,
+        "selected_manual_departure": data.selected_manual_departure.isoformat() if data.selected_manual_departure else None,
         "start_datetime": data.start.isoformat() if data.start else None,
         "stop_datetime": data.stop.isoformat() if data.stop else None,
         "heater_switch_entity_id": data.heater_switch_entity_id,
@@ -180,16 +182,24 @@ def _common_attributes(data) -> dict:
     }
 
 
+def _no_time_text(data) -> str:
+    if not data.enabled:
+        return "Inaktiv"
+    if data.manual_departure_passed:
+        return "Tiden har passerat"
+    if data.departure is not None and data.temperature is not None and data.runtime_hours <= 0:
+        return "Över gränsen"
+    return "Ingen avresa"
+
+
 def _fmt_dt(value: datetime | None) -> str:
     if value is None:
         return "--:--"
-    return value.strftime("%H:%M")
+    return value.strftime("%Y-%m-%d %H:%M")
 
 
 def _fmt_runtime(hours: float | None) -> str:
     if not hours or hours <= 0:
         return "00:00"
-    seconds = int(round(hours * 3600))
-    td = timedelta(seconds=seconds)
-    total_minutes = int(td.total_seconds() // 60)
+    total_minutes = int(round(hours * 60))
     return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 import logging
 from typing import Any
 
@@ -23,7 +23,8 @@ from .const import (
     CONF_TEMP_LIMIT,
     CONF_TEMP_SENSORS,
     CONF_WORKDAY_DEPARTURE,
-    CONF_WORKDAY_SENSOR,
+    CONF_WORKDAY_CALENDAR,
+    STATE_MANUAL_DATE,
     CONF_USE_WORKDAY,
     DEFAULT_AFTER_DEPARTURE_MINUTES,
     DEFAULT_MANUAL_DEPARTURE,
@@ -77,6 +78,8 @@ class HeaterData:
     manual_active: bool = False
     start_now_active: bool = False
     is_workday: bool | None = None
+    manual_departure_passed: bool = False
+    selected_manual_departure: datetime | None = None
     temperature: float | None = None
     temperature_source: str | None = None
     temperature_source_name: str | None = None
@@ -131,6 +134,9 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         )
         self.enabled = False
         self.manual_active = False
+        self.manual_date: str | None = None
+        self._workday_dates: set[date] = set()
+        self._calendar_cache_date: date | None = None
         self.start_now_active = False
         self.start_now_started: str | None = None
         self.start_now_stop: str | None = None
@@ -165,6 +171,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         if stored:
             self.enabled = bool(stored.get(STATE_ENABLED, False))
             self.manual_active = bool(stored.get(STATE_MANUAL_ACTIVE, False))
+            self.manual_date = stored.get(STATE_MANUAL_DATE)
             self.start_now_active = bool(stored.get(STATE_START_NOW_ACTIVE, False))
             self.start_now_started = stored.get(STATE_START_NOW_STARTED)
             self.start_now_stop = stored.get(STATE_START_NOW_STOP)
@@ -186,6 +193,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             {
                 STATE_ENABLED: self.enabled,
                 STATE_MANUAL_ACTIVE: self.manual_active,
+                STATE_MANUAL_DATE: self.manual_date,
                 STATE_START_NOW_ACTIVE: self.start_now_active,
                 STATE_START_NOW_STARTED: self.start_now_started,
                 STATE_START_NOW_STOP: self.start_now_stop,
@@ -229,12 +237,27 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         self.manual_active = active
         if active:
             self.enabled = True
+            # Keep a date explicitly selected before activation. Only use
+            # today when no one-time departure date has been set yet.
+            if not self.manual_date:
+                self.manual_date = dt_util.now().date().isoformat()
 
         # The switch entity reads coordinator.data, not self.manual_active.
         # Keep both in sync before any awaited I/O can expose stale state.
         if self.data is not None:
             self.async_set_updated_data(
-                replace(self.data, manual_active=active, enabled=self.enabled)
+                replace(
+                    self.data,
+                    manual_active=active,
+                    enabled=self.enabled,
+                    departure=None,
+                    start=None,
+                    stop=None,
+                    planned_departure=None,
+                    planned_start=None,
+                    planned_stop=None,
+                    schedule_mode="manual" if active else None,
+                )
             )
 
         await self._async_save()
@@ -331,8 +354,55 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         self.hass.config_entries.async_update_entry(self.entry, options=options)
         await self.async_request_refresh()
 
+    async def async_set_manual_date(self, value: date) -> None:
+        """Set an explicit one-time departure date."""
+        self.manual_date = value.isoformat()
+        if self.scheduled_mode == "manual" and self.scheduled_departure:
+            old = self._parse_dt(self.scheduled_departure)
+            if old:
+                departure = datetime.combine(value, old.timetz())
+                self.scheduled_departure = departure.isoformat()
+                self.scheduled_stop = (departure + timedelta(minutes=int(self.config.get(
+                    CONF_AFTER_DEPARTURE_MINUTES, DEFAULT_AFTER_DEPARTURE_MINUTES
+                )))).isoformat()
+        await self._async_save()
+        await self.async_request_refresh()
+
+    async def _async_refresh_workdays(self, now: datetime) -> None:
+        """Cache upcoming all-day workday calendar events once per day."""
+        calendar = self.config.get(CONF_WORKDAY_CALENDAR)
+        if not calendar:
+            self._workday_dates.clear()
+            return
+        if self._calendar_cache_date == now.date():
+            return
+        try:
+            response = await self.hass.services.async_call(
+                "calendar", "get_events",
+                {"start_date_time": now.date().isoformat(),
+                 "end_date_time": (now.date() + timedelta(days=60)).isoformat()},
+                target={"entity_id": calendar}, blocking=True, return_response=True,
+            )
+            events = (response or {}).get(calendar, {}).get("events", [])
+            days: set[date] = set()
+            for event in events:
+                start = date.fromisoformat(str(event["start"])[:10])
+                end = date.fromisoformat(str(event["end"])[:10])
+                # Calendar end date is exclusive for all-day events.
+                day = start
+                while day < end and day < now.date() + timedelta(days=60):
+                    days.add(day)
+                    day += timedelta(days=1)
+            self._workday_dates = days
+            self._calendar_cache_date = now.date()
+        except Exception:
+            _LOGGER.exception("Could not retrieve Workday calendar events")
+            # Retain previous results if the calendar temporarily fails.
+
     async def _async_update_data(self) -> HeaterData:
         now = dt_util.now()
+        if self.enabled and self.use_workday:
+            await self._async_refresh_workdays(now)
         # Clear an expired lock before calculating the next schedule.
         locked_stop = self._parse_dt(self.scheduled_stop)
         if self.scheduled_stop and (locked_stop is None or now >= locked_stop):
@@ -469,15 +539,6 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
         runtime_minutes = min(runtime_minutes, max_minutes)
         return round(runtime_minutes / 60, 2)
 
-    def _is_workday(self) -> bool | None:
-        entity_id = self.config.get(CONF_WORKDAY_SENSOR)
-        if not entity_id:
-            return None
-        state = self.hass.states.get(str(entity_id))
-        if state is None or state.state in BAD_STATES:
-            return None
-        return state.state == STATE_ON
-
     def _parse_dt(self, value: str | None) -> datetime | None:
         if not value:
             return None
@@ -518,7 +579,7 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
     def _calculate(self, now: datetime) -> HeaterData:
         temperature, source, source_name = self._first_valid_temperature()
         runtime = self._runtime_from_temperature(temperature)
-        is_workday = self._is_workday() if self.use_workday else None
+        is_workday = (now.date() in self._workday_dates) if self.use_workday and self.config.get(CONF_WORKDAY_CALENDAR) else None
         switch_state = self.hass.states.get(self.heater_switch)
         power, power_entity_id, power_name, power_unit, power_device_class = self._current_power()
 
@@ -594,28 +655,43 @@ class CarHeaterCoordinator(DataUpdateCoordinator[HeaterData]):
             self._set_timeline_durations(base, now)
             return base
 
-        roll_to_tomorrow = True
+        departure: datetime | None = None
         if self.manual_active:
             departure_time = self._get_time(CONF_MANUAL_DEPARTURE, DEFAULT_MANUAL_DEPARTURE)
-            # Treat manual departure the same way as scheduled departures:
-            # if today's manual departure and after-time have already passed,
-            # keep one-time mode active and schedule it for tomorrow instead
-            # of immediately marking it as finished and turning it off.
-            roll_to_tomorrow = True
+            try:
+                chosen_date = date.fromisoformat(self.manual_date or now.date().isoformat())
+            except ValueError:
+                chosen_date = now.date()
+            departure = datetime.combine(chosen_date, departure_time, tzinfo=now.tzinfo)
+            base.selected_manual_departure = departure
+            # A one-time departure is a fixed calendar date and clock time.
+            # Never combine the Workday date with the one-time clock time, and
+            # never silently move an explicitly selected date to tomorrow.
+            after = timedelta(minutes=int(self.config.get(
+                CONF_AFTER_DEPARTURE_MINUTES, DEFAULT_AFTER_DEPARTURE_MINUTES
+            )))
+            if departure + after <= now:
+                base.manual_departure_passed = True
+                departure = None
             base.schedule_mode = "manual"
-        elif self.use_workday and is_workday is True:
+        elif self.use_workday:
             departure_time = self._get_time(CONF_WORKDAY_DEPARTURE, DEFAULT_WORKDAY_DEPARTURE)
+            after = timedelta(minutes=int(self.config.get(
+                CONF_AFTER_DEPARTURE_MINUTES, DEFAULT_AFTER_DEPARTURE_MINUTES
+            )))
+            if self.config.get(CONF_WORKDAY_CALENDAR):
+                for day in sorted(self._workday_dates):
+                    candidate = datetime.combine(day, departure_time, tzinfo=now.tzinfo)
+                    if candidate + after > now:
+                        departure = candidate
+                        break
             base.schedule_mode = "workday"
-        else:
+
+        if departure is None:
             base.status = STATUS_NO_DEPARTURE
             self._set_timeline_durations(base, now)
             return base
 
-        departure = self._departure_datetime(
-            departure_time,
-            now,
-            roll_to_tomorrow_after_stop=roll_to_tomorrow,
-        )
         # Scheduler ticks on whole minutes. Round the start DOWN to a whole
         # minute so the displayed HH:MM matches the minute it actually starts.
         start = (departure - timedelta(hours=runtime)).replace(second=0, microsecond=0) if runtime > 0 else None
